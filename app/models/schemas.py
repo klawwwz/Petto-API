@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr
 class UserBase(BaseModel): 
     nome:  str
     email: EmailStr 
-    senha: str
+    senha: str 
 
 class PetBase(BaseModel):
     nome:     str
