@@ -1,81 +1,112 @@
-#aqui é pra adicionar os modelos que definem as estruturas de dados que serão usadas no banco de dados
-from pydantic import BaseModel, EmailStr
+from datetime import date
+from enum import Enum
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
+from typing import Optional
 
-class UserBase(BaseModel): 
-    nome:  str
-    email: EmailStr 
-    senha: str 
+# --- Enums para valores fixos ---
+class Sexo(str, Enum):
+    M = "Macho"
+    F = "Fêmea"
+    I = "Indefinido"
+
+class TipoPet(str, Enum):
+    CACHORRO = "Cachorro"
+    GATO = "Gato"
+    PASSARO = "Pássaro"
+    OUTRO = "Outro"
+
+# --- Configuração Global ---
+class BaseConfig:
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={
+            date: lambda v: v.isoformat()
+        }
+    )
+
+# --- Schemas Base ---
+class UserBase(BaseModel):
+    nome: str = Field(..., min_length=2, max_length=100)
+    email: EmailStr
+    senha: str = Field(..., min_length=6, pattern="^(?=.*[A-Za-z])(?=.*\d).{6,}$")
 
 class PetBase(BaseModel):
-    nome:     str
-    raca:     str   | None = None
-    dataNasc: str   | None = None #datetime / preciso ver como definir para receber uma data "YYYY-MM-DD"
-    tipo:     str
-    sexo:     str   | None = None #aqui preciso colocar pra ser ou só macho, ou só fêmea ou indefinido
-    peso:     float | None = None
-    cor:      str   | None = None
+    nome: str = Field(..., min_length=2, max_length=45)
+    raca: Optional[str] = Field(None, max_length=45)
+    dataNasc: Optional[date] = Field(None, examples=["2020-01-01"])
+    tipo: TipoPet
+    sexo: Optional[Sexo] = None
+    peso: Optional[float] = Field(None, gt=0, le=200, description="Peso em kg")
+    cor: Optional[str] = Field(None, max_length=45)
 
-class DiaryBase(BaseModel):
-    data:      str #datetime / preciso ver como definir para receber uma data "YYYY-MM-DD"
-    descricao: str 
-    pet_id:    int #aqui é chave estrangeira do pet
-    user_id:   int #aqui é chave estrangeira do user
+    @field_validator('dataNasc', mode='before')
+    @classmethod
+    def parse_date(cls, value) -> Optional[date]:
+        if not value:
+            return None
+        if isinstance(value, date):
+            return value
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            raise ValueError("Formato de data inválido. Use YYYY-MM-DD")
 
-class EventBase(BaseModel):
-    nome:   str 
-    data:   str #datetime / preciso ver como definir para receber uma data "YYYY-MM-DD"   
-    pet_id: str #aqui é chave estrangeira do pet
+# --- Schemas de Diário (Somente Leitura) ---
+class DiaryRead(BaseModel, BaseConfig):
+    id: int
+    titulo: str = Field(..., max_length=45)
+    conteudo: str = Field(..., max_length=500)
+    data_criacao: date
+    pet_id: int
+    user_id: int
 
-class DiseaseBase(BaseModel): #Aqui é pra parte do histórico de doenças
-    nome:      str 
-    descricao: str | None = None
-    pet_id:    str #aqui é chave estrangeira do pet
+    # Desabilita criação/atualização
+    model_config = ConfigDict(
+        extra='forbid',  # Não permite campos extras
+        frozen=True  # Torna o modelo imutável
+    )
 
-class MedicationBase(BaseModel):
-    nome:      str 
-    descricao: str | None = None
-    pet_id:    str #aqui é chave estrangeira do pet
+# --- Outros Schemas (Eventos, Doenças, etc) ---
+class EventRead(BaseModel, BaseConfig):
+    id: int
+    nome: str = Field(..., max_length=45)
+    data: date
+    pet_id: int
 
-class VaccineBase(BaseModel):
-    nome:      str   
-    descricao: str | None = None
-    pet_id:    str #aqui é chave estrangeira do pet
+class DiseaseRead(BaseModel, BaseConfig):
+    id: int
+    nome: str = Field(..., max_length=100)
+    descricao: Optional[str] = Field(None, max_length=500)
+    pet_id: int
 
- #Preciso das classes de atualização e de resposta
-class UserUpdate(UserBase): #aqui é pra atualizar os dados do usuário
-    nome:  str | None = None 
-    senha: str | None = None
+# --- Schemas de Atualização ---
+class UserUpdate(BaseModel):
+    nome: Optional[str] = Field(None, min_length=2, max_length=100)
+    senha: Optional[str] = Field(None, min_length=6)
 
-class PetUpdate(PetBase): #aqui é pra atualizar os dados do pet
-    nome:     str   | None = None
-    raca:     str   | None = None
-    dataNasc: str   | None = None #datetime / preciso ver como definir para receber uma data "YYYY-MM-DD"
-    tipo:     str   | None = None
-    sexo:     str   | None = None #aqui preciso colocar pra ser ou só macho, ou só fêmea ou indefinido
-    peso:     float | None = None 
-    cor:      str   | None = None
+class PetUpdate(BaseModel):
+    nome: Optional[str] = Field(None, min_length=2, max_length=45)
+    raca: Optional[str] = Field(None, max_length=45)
+    dataNasc: Optional[date] = Field(None, examples=["2020-01-01"])
+    tipo: Optional[TipoPet] = None
+    sexo: Optional[Sexo] = None
+    peso: Optional[float] = Field(None, gt=0, le=200)
+    cor: Optional[str] = Field(None, max_length=45)
 
-class UserResponse(BaseModel): #aqui é pra retornar os dados do usuário
+# --- Schemas de Resposta ---
+class UserResponse(BaseModel, BaseConfig):
     msg: str
-    nome: str #aqui é pra retornar só o nome
+    nome: str
 
-class PetResponse(PetBase): #aqui é pra retornar os dados do pet
-    id:   int #aqui é pra retornar o id do pet
-    nome: str  
+class PetResponse(BaseModel, BaseConfig):
+    id: int
+    nome: str
     tipo: str
+    diarios: list[DiaryRead] = []  # Lista de diários (somente leitura)
 
-class PetDetails(PetResponse): #aqui é pra retornar os dados do pet com mais detalhes
-    raca:     str   | None = None
-    dataNasc: str   | None = None #datetime / preciso ver como definir para receber uma data "YYYY-MM-DD"
-    sexo:     str   | None = None #aqui preciso colocar pra ser ou só macho, ou só fêmea ou indefinido
-    peso:     float | None = None
-    cor:      str   | None = None
-
-class Config:
-    orm_mode = True #aqui é pra permitir que o pydantic converta os dados do banco de dados em objetos do pydantic
-    #isso é necessário pra que o pydantic consiga trabalhar com os dados do banco de dados, já que eles são armazenados em formato de dicionário
-    #e não em formato de objeto.
-
-
-
-
+class PetDetails(PetResponse):
+    raca: Optional[str] = None
+    dataNasc: Optional[date] = None
+    sexo: Optional[str] = None
+    peso: Optional[float] = None
+    cor: Optional[str] = None

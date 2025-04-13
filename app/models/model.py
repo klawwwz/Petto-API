@@ -1,74 +1,69 @@
 #Aqui fica os modelos do banco de dados
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, Float, Blob
+from sqlalchemy import  BLOB, Column, Date, ForeignKey, Integer, Numeric, String 
 from sqlalchemy.orm import relationship
-from database import Base
+from app.database.connection import Base
 
 class Usuario (Base):
-    __tablename__ = "usuario"
-    id_usuario = Column(Integer, primary_key=True)
-    email = Column(String(255))
+    __tablename__ = "usuarios"
+    id_usuario = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(255), unique=True, nullable=False) 
     nome = Column(String(100))
     senha = Column(String(45))
 
-# Área de Saúde
-
-class Medicamentos (Base):
+class Medicamento (Base):
     __tablename__ = "medicamentos"
     id_med = Column(Integer, primary_key=True)
     conteudo = Column(String(500))
 
-class Vacinacao (Base):
-    __tablename__ = "vacinacao"
-    id_vac = Column(Integer, primary_key=True)
+class Vacina (Base):
+    __tablename__ = "vacinas"
+    id_vac = Column(Integer,  primary_key=True)
     conteudo = Column(String(500))
 
 class Historico (Base):
-    __tablename__ = "historico"
-    id_his = Column(Integer, primary_key=True)
-    conteudo = Column(Integer, primary_key=True)
-
+    __tablename__ = "historicos"
+    id_his = Column(Integer,  primary_key=True)
+    conteudo = Column(String(500))
+ 
 class Foto (Base):
-    __tablename__ = "foto"
+    __tablename__ = "fotos" 
     id_foto = Column(Integer, primary_key=True)
-    foto = Column(Blob)
+    foto = Column(BLOB, nullable=False)
 
 class Pet (Base):
-    __tablename__ = "pet"
-    id_pet = Column(Integer, primary_key=True)
-    nome = Column(String(45))
-    data_nascimento = Column(Date)
-    tipo = Column(String(45))
-    cor = Column(String(45))
-    peso = Column(String(10,2))
+    __tablename__ = "pets"
+    id_pet = Column(Integer, primary_key=True, autoincrement=True)
+    nome = Column(String(45), nullable=False)
+    data_nascimento = Column(Date, nullable=True)
+    tipo = Column(String(45), nullable=False)
+    cor = Column(String(45), nullable=True)
+    peso = Column(Numeric(10,2))
     raca = Column(String(45))
     sexo = Column(String(45))
-    id_foto = Column(Integer, ForeignKey("foto.id_foto"))
-    id_usuario = Column(Integer, ForeignKey("usuario.id_usuario"))
-    id_med = Column(Integer, ForeignKey("medicamentos.id_med"))
-    id_vac = Column(Integer, ForeignKey("vacinacao.id_vac"))
-    id_his = Column(Integer, ForeignKey("historico.id_his"))
-    #Falta terminar a ultima parte
-    #CONSTRAINT pk_pet PRIMARY KEY (id_pet),
-    #CONSTRAINT fk_pet_foto FOREIGN KEY (id_foto)
-    #REFERENCES foto (id_foto) ON DELETE CASCADE ON UPDATE CASCADE,
-    #CONSTRAINT fk_pet_usuario FOREIGN KEY (id_usuario)
-    #REFERENCES usuario (id_usuario) ON DELETE CASCADE ON UPDATE CASCADE,
-    #CONSTRAINT fk_pet_medicamentos FOREIGN KEY (id_med)
-    #REFERENCES medicamentos (id_med) ON DELETE CASCADE ON UPDATE CASCADE,
-    #CONSTRAINT fk_pet_vacinacao FOREIGN KEY (id_vac)
-    #REFERENCES vacinacao (id_vac) ON DELETE CASCADE ON UPDATE CASCADE,
-    #CONSTRAINT fk_pet_historico FOREIGN KEY (id_his)
-    #REFERENCES historico (id_his) ON DELETE CASCADE ON UPDATE CASCADE 
+    id_foto = Column(Integer, ForeignKey("fotos.id_foto", ondelete="cascade", onupdate="cascade"))
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="cascade", onupdate="cascade"))
+    id_med = Column(Integer, ForeignKey("medicamentos.id_med", ondelete="cascade", onupdate="cascade"))
+    id_vac = Column(Integer, ForeignKey("vacinas.id_vac", ondelete="cascade", onupdate="cascade"))
+    id_his = Column(Integer, ForeignKey("historicos.id_his", ondelete="cascade", onupdate="cascade"))
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.diarios = [Diario(titulo="Diário Inicial", conteudo=f"Histórico de {self.nome}")] 
+    
+    usuario = relationship("Usuario", backref="pets")
+    medicamentos = relationship("Medicamento", backref="pets")
+    vacinacao = relationship("Vacina", backref="pets")
+    historico = relationship("Historico", backref="pets")
+    foto = relationship("Foto", backref="pets")
 
 class Diario (Base):
-    __tablename__ = "diario"
+    __tablename__ = "diarios"
     id_diario = Column(Integer, primary_key=True)
     titulo = Column(String(45))
     conteudo = Column(String(500))
-    id_pet = Column(Integer, ForeignKey("pet.id_pet"))
-    #CONSTRAINT pk_diario PRIMARY KEY (id_diario),
-    #CONSTRAINT fk_diario_pet FOREIGN KEY (id_pet)
-    #REFERENCES pet (id_pet) ON DELETE CASCADE ON UPDATE CASCADE
-#Tela de Diário
+    id_pet = Column(Integer, ForeignKey("pets.id_pet", ondelete="cascade", onupdate="cascade"))
+
+    pet = relationship("Pet", backref="diarios")
+    
 
 
