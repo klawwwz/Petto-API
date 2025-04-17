@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from app.models import model
 from app.database.connection import engine
 from contextlib import asynccontextmanager
-from app.routes import users, pets, diaries, medical
+from app.routes import users, pets, diaries, medical, auth
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,11 +20,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Inclua todas as rotas
+# todas as rotas
 app.include_router(users.router)
 app.include_router(pets.router)
 app.include_router(diaries.router)
 app.include_router(medical.router)
+app.include_router(auth.router)
 
 @app.get("/")
 def read_root():

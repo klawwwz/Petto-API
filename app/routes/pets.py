@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.models.schemas import PetBase, PetResponse, PetDetails, PetUpdate, PetPhotoResponse
+from app.models.schemas import PetBase, PetResponse, PetDetails, PetUpdate, PetPhotoBase
 from app.models import model
 from app.database.connection import get_db
 
@@ -21,6 +21,10 @@ async def create_pet(
     # Cria o diário vazio automaticamente
     db_diario = model.Diario(conteudo="", id_pet=db_pet.id_pet)
     db.add(db_diario)
+
+    # Cria a área de saúde automaticamente
+    db_saude = model.SaudePet(id_pet=db_pet.id_pet)
+    db.add(db_saude)
 
     # Processa a foto se fornecida
     if foto_perfil:
@@ -79,7 +83,7 @@ def delete_pet(pet_id: int, db: Session = Depends(get_db)):
     db.commit()
     return
 
-@router.post("/{pet_id}/foto", response_model=PetPhotoResponse, status_code=201)
+@router.post("/{pet_id}/foto", response_model=PetPhotoBase, status_code=201) #Mas aqui tenho que gerar a resposta da foto
 async def upload_foto_pet(
     pet_id: int,
     file: UploadFile = File(...),
@@ -131,3 +135,23 @@ def delete_foto_pet(
     pet.id_foto = None
     db.commit()
     return
+
+@router.get("/carrossel/{user_id}", response_model=List[dict])
+def get_pets_carrossel(user_id: int, db: Session = Depends(get_db)):
+    pets = db.query(
+        model.Pet.id_pet,
+        model.Pet.nome,
+        model.Foto.foto,
+        model.Foto.tipo_arquivo
+    ).join(
+        model.Foto, model.Pet.id_foto == model.Foto.id_foto, isouter=True
+    ).filter(
+        model.Pet.id_usuario == user_id
+    ).all()
+    
+    return [{
+        "id": pet.id_pet,
+        "nome": pet.nome,
+        "foto": pet.foto.decode('utf-8') if pet.foto else None,
+        "tipo_arquivo": pet.tipo_arquivo
+    } for pet in pets]

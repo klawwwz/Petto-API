@@ -1,10 +1,10 @@
 from datetime import date
 from enum import Enum
-from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
-from typing import Optional, List
+from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
+from typing import Optional, List, Union
 from fastapi import UploadFile
 
-# --- Enums para valores fixos ---
+# ==================== ENUMS ====================
 class Sexo(str, Enum):
     M = "Macho"
     F = "Fêmea"
@@ -16,19 +16,32 @@ class TipoPet(str, Enum):
     PASSARO = "Pássaro"
     OUTRO = "Outro"
 
-# --- Configuração Global ---
+# ==================== CONFIG ====================
 class BaseConfig:
     model_config = ConfigDict(
         from_attributes=True,
         json_encoders={date: lambda v: v.isoformat()}
     )
 
-# --- Schemas Base ---
+# ==================== USUÁRIO ====================
 class UserBase(BaseModel):
     nome: str = Field(min_length=2, max_length=100)
     email: EmailStr
     senha: str = Field(min_length=6)
 
+class UserCreate(UserBase):
+    pass
+
+class UserUpdate(BaseModel):
+    nome: Optional[str] = Field(None, min_length=2, max_length=100)
+    email: Optional[EmailStr] = None
+    senha: Optional[str] = Field(None, min_length=6)
+
+class UserResponse(BaseModel, BaseConfig):
+    msg: str
+    nome: str
+
+# ==================== PET ====================
 class PetBase(BaseModel):
     nome: str = Field(min_length=2, max_length=45)
     raca: Optional[str] = Field(None, max_length=45)
@@ -50,53 +63,8 @@ class PetBase(BaseModel):
         except ValueError:
             raise ValueError("Formato de data inválido. Use YYYY-MM-DD")
 
-# --- Schemas para Fotos ---
-class PetPhotoBase(BaseModel):
-    foto: bytes = Field(..., description="Dados binários da imagem")
-    tipo_arquivo: str = Field(..., description="Tipo MIME da imagem (ex: image/jpeg)")
-
-class PetPhotoUpload(BaseModel):
-    """Schema para upload via JSON (base64) - opcional"""
-    foto_base64: str = Field(..., description="String base64 da imagem")
-    tipo_arquivo: str = Field(..., description="Tipo MIME da imagem")
-
-class PetPhotoResponse(BaseModel, BaseConfig):
-    """Resposta para operações com fotos"""
-    id_foto: int
-    tipo_arquivo: str
-    mensagem: str = "Pronto"
-
-# --- Schemas para Diário ---
-class DiaryBase(BaseModel):
-    conteudo: str = Field(default="")
-
-class DiaryResponse(BaseModel, BaseConfig):
-    conteudo: str
-    nome_pet: str
-
-# --- Schemas de Resposta ---
-class UserResponse(BaseModel, BaseConfig):
-    msg: str
-    nome: str
-
-class PetResponse(BaseModel, BaseConfig):
-    id: int
-    nome: str
-    tipo: str
-    diario: DiaryResponse
-
-class PetDetails(PetResponse):
-    raca: Optional[str] = None
-    dataNasc: Optional[date] = None
-    sexo: Optional[str] = None
-    peso: Optional[float] = None
-    cor: Optional[str] = None
-    foto: Optional[PetPhotoResponse] = None
-
-# --- Schemas de Atualização ---
-class UserUpdate(BaseModel):
-    nome: Optional[str] = Field(None, min_length=2, max_length=100)
-    senha: Optional[str] = Field(None, min_length=6)
+class PetCreate(PetBase):
+    id_usuario: int
 
 class PetUpdate(BaseModel):
     nome: Optional[str] = Field(None, min_length=2, max_length=45)
@@ -107,28 +75,74 @@ class PetUpdate(BaseModel):
     peso: Optional[float] = Field(None, gt=0, le=200)
     cor: Optional[str] = Field(None, max_length=45)
 
-# --- Outros Schemas ---
-class MedicationBase(BaseModel):
-    id_med: int
-    conteudo: str = Field()
+class PetResponse(BaseModel, BaseConfig):
+    id: int
+    nome: str
+    tipo: str
+    diario: 'DiaryResponse'
 
-class VaccineBase(BaseModel):
-    id_vac: int
-    conteudo: str = Field()
+class PetDetails(PetResponse):
+    raca: Optional[str] = None
+    dataNasc: Optional[date] = None
+    sexo: Optional[str] = None
+    peso: Optional[float] = None
+    cor: Optional[str] = None
+    foto: Optional['FotoResponse'] = None
 
-class DiseaseBase(BaseModel):
-    id_his: int
-    nome: str = Field(max_length=100)
-    descricao: Optional[str] = Field(None, max_length=500)
+# ==================== FOTO ====================
+class PetPhotoBase(BaseModel):
+    foto: bytes = Field(..., description="Dados binários da imagem")
+    tipo_arquivo: str = Field(..., description="Tipo MIME da imagem (ex: image/jpeg)")
 
+class PetPhotoUpload(BaseModel):
+    foto_base64: str = Field(..., description="String base64 da imagem")
+    tipo_arquivo: str = Field(..., description="Tipo MIME da imagem")
+
+class FotoResponse(BaseModel, BaseConfig):
+    id_foto: int
+    tipo_arquivo: str
+    mensagem: str = "Operação realizada com sucesso"
+
+# ==================== DIÁRIO ====================
+class DiaryBase(BaseModel):
+    conteudo: str = Field(default="")
+
+class DiaryUpdate(BaseModel):
+    conteudo: str
+
+class DiaryResponse(BaseModel, BaseConfig):
+    conteudo: str
+    nome_pet: str
+
+# ==================== SAÚDE ====================
+class SaudePetBase(BaseModel):
+    """Modelo base para os 3 mini-diários de saúde"""
+    vacinas: str = Field(default="", description="Texto acumulado de vacinas")
+    medicamentos: str = Field(default="", description="Texto acumulado de medicamentos")
+    doencas: str = Field(default="", description="Texto acumulado de doenças")
+
+class SaudePetUpdate(BaseModel):
+    """Modelo para atualizar os mini-diários"""
+    vacinas: Optional[str] = Field(None, description="Novo texto para acrescentar às vacinas")
+    medicamentos: Optional[str] = Field(None, description="Novo texto para acrescentar aos medicamentos")
+    doencas: Optional[str] = Field(None, description="Novo texto para acrescentar às doenças")
+
+class SaudePetResponse(SaudePetBase):
+    """Resposta completa dos mini-diários"""
+    id: int
+    pet_id: int
+    ultima_atualizacao: date
+
+# ==================== EVENTOS ====================
 class EventRead(BaseModel, BaseConfig):
     id: int
     nome: str = Field(max_length=45)
     data: date
     pet_id: int
 
-class DiseaseRead(BaseModel, BaseConfig):
-    id: int
-    nome: str = Field(max_length=100)
-    descricao: Optional[str] = Field(None, max_length=500)
-    pet_id: int
+# ==================== RESOLUÇÃO DE REFERÊNCIAS ====================
+# Correção para Pydantic v2+:
+DiaryResponse.model_rebuild()
+FotoResponse.model_rebuild()
+PetResponse.model_rebuild()
+PetDetails.model_rebuild()

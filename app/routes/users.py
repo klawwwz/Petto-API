@@ -33,9 +33,9 @@ def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db)):
     if db_user is None:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     
-    update_data = user.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_user, key, value)
+    # Permite atualizar apenas o nome
+    if user.nome is not None:
+        db_user.nome = user.nome
     
     db.commit()
     db.refresh(db_user)

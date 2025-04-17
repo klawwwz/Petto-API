@@ -1,49 +1,39 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
-from app.models.schemas import MedicationBase, VaccineBase, DiseaseBase
+from app.models.schemas import SaudePetResponse, SaudePetUpdate
 from app.models import model
 from app.database.connection import get_db
+from sqlalchemy.sql import func
 
 router = APIRouter(prefix="/medical", tags=["medical"])
 
-# Rotas para Medicamentos
-@router.post("/medications/", status_code=201)
-def create_medication(med: MedicationBase, db: Session = Depends(get_db)):
-    db_med = model.Medicamento(**med.model_dump())
-    db.add(db_med)
+@router.get("/pet/{pet_id}", response_model=SaudePetResponse)
+def get_saude_pet(pet_id: int, db: Session = Depends(get_db)):
+    saude = db.query(model.SaudePet).filter(model.SaudePet.pet_id == pet_id).first()
+    if not saude:
+        raise HTTPException(status_code=404, detail="Registro de saúde não encontrado")
+    return saude
+
+@router.patch("/pet/{pet_id}", response_model=SaudePetResponse)
+def update_saude_pet(
+    pet_id: int,
+    update: SaudePetUpdate,
+    db: Session = Depends(get_db)
+):
+    saude = db.query(model.SaudePet).filter(model.SaudePet.pet_id == pet_id).first()
+    if not saude:
+        saude = model.SaudePet(pet_id=pet_id)
+        db.add(saude)
+    
+    # Atualiza apenas os campos fornecidos, acumulando texto
+    if update.vacinas is not None:
+        saude.vacinas = f"{saude.vacinas}\n{update.vacinas}".strip()
+    if update.medicamentos is not None:
+        saude.medicamentos = f"{saude.medicamentos}\n{update.medicamentos}".strip()
+    if update.doencas is not None:
+        saude.doencas = f"{saude.doencas}\n{update.doencas}".strip()
+    
+    saude.ultima_atualizacao = func.now()
     db.commit()
-    db.refresh(db_med)
-    return {"message": "Medicação registrada", "id": db_med.id_med}
-
-@router.get("/medications/pet/{pet_id}", response_model=List[MedicationBase])
-def get_pet_medications(pet_id: int, db: Session = Depends(get_db)):
-    meds = db.query(model.Medicamento).filter(model.Medicamento.pet_id == pet_id).all()
-    return meds
-
-@router.post("/vaccines/", status_code=201)
-def create_vaccine(vaccine: VaccineBase, db: Session = Depends(get_db)):
-    db_vaccine = model.Vacina(**vaccine.model_dump())
-    db.add(db_vaccine)
-    db.commit()
-    db.refresh(db_vaccine)
-    return {"message": "Vacina registrada", "id": db_vaccine.id_vac}
-
-@router.get("/vaccines/pet/{pet_id}", response_model=List[VaccineBase])
-def get_pet_vaccines(pet_id: int, db: Session = Depends(get_db)):
-    vaccines = db.query(model.Vacina).filter(model.Vacina.pet_id == pet_id).all()
-    return vaccines
-
-# Rotas para Histórico de Doenças
-@router.post("/diseases/", status_code=201)
-def create_disease(disease: DiseaseBase, db: Session = Depends(get_db)):
-    db_disease = model.Historico(**disease.model_dump())
-    db.add(db_disease)
-    db.commit()
-    db.refresh(db_disease)
-    return {"message": "Doença registrada", "id": db_disease.id_his}
-
-@router.get("/diseases/pet/{pet_id}", response_model=List[DiseaseBase])
-def get_pet_diseases(pet_id: int, db: Session = Depends(get_db)):
-    diseases = db.query(model.Historico).filter(model.Historico.pet_id == pet_id).all()
-    return diseases
+    db.refresh(saude)
+    return saude
