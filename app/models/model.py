@@ -1,5 +1,6 @@
 #Aqui fica os modelos do banco de dados
-from sqlalchemy import  BLOB, Column, Date, ForeignKey, Integer, Numeric, String 
+from sqlalchemy import  BLOB, Column, Date, ForeignKey, Integer, Numeric, String, Text, LargeBinary
+from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database.connection import Base
 
@@ -9,6 +10,14 @@ class Usuario (Base):
     email = Column(String(255), unique=True, nullable=False) 
     nome = Column(String(100))
     senha = Column(String(45))
+
+class Foto(Base):
+    __tablename__ = "fotos_perfil"
+    
+    id_foto = Column(Integer, primary_key=True, autoincrement=True)
+    foto = Column(LargeBinary, nullable=False)  # Armazena os bytes da imagem
+    tipo_arquivo = Column(String(50), nullable=False)  # Ex: 'image/jpeg'
+    data_upload = Column(Date, server_default=func.now())
 
 class Medicamento (Base):
     __tablename__ = "medicamentos"
@@ -48,7 +57,7 @@ class Pet (Base):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.diarios = [Diario(titulo="Diário Inicial", conteudo=f"Histórico de {self.nome}")] 
+        self.diarios = [Diario(titulo="Diário Inicial")] 
     
     usuario = relationship("Usuario", backref="pets")
     medicamentos = relationship("Medicamento", backref="pets")
@@ -56,14 +65,18 @@ class Pet (Base):
     historico = relationship("Historico", backref="pets")
     foto = relationship("Foto", backref="pets")
 
-class Diario (Base):
+class Diario(Base):
     __tablename__ = "diarios"
-    id_diario = Column(Integer, primary_key=True)
-    titulo = Column(String(45))
-    conteudo = Column(String(500))
-    id_pet = Column(Integer, ForeignKey("pets.id_pet", ondelete="cascade", onupdate="cascade"))
+    id_diario = Column(Integer, primary_key=True, autoincrement=True)
+    conteudo = Column(Text, default="")
+    id_pet = Column(Integer, ForeignKey("pets.id_pet", ondelete="CASCADE"), unique=True)
 
-    pet = relationship("Pet", backref="diarios")
+    pet = relationship("Pet", backref="diario", uselist=False)
+
+    # Propriedade para obter o título dinâmico
+    @property
+    def titulo(self):
+        return f"Diário de {self.pet.nome}" if self.pet else "Diário"
     
 
 

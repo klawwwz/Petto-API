@@ -21,7 +21,6 @@ def get_pet_medications(pet_id: int, db: Session = Depends(get_db)):
     meds = db.query(model.Medicamento).filter(model.Medicamento.pet_id == pet_id).all()
     return meds
 
-# Rotas para Vacinas
 @router.post("/vaccines/", status_code=201)
 def create_vaccine(vaccine: VaccineBase, db: Session = Depends(get_db)):
     db_vaccine = model.Vacina(**vaccine.model_dump())

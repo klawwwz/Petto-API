@@ -1,7 +1,8 @@
 from datetime import date
 from enum import Enum
 from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
-from typing import Optional
+from typing import Optional, List
+from fastapi import UploadFile
 
 # --- Enums para valores fixos ---
 class Sexo(str, Enum):
@@ -19,19 +20,17 @@ class TipoPet(str, Enum):
 class BaseConfig:
     model_config = ConfigDict(
         from_attributes=True,
-        json_encoders={
-            date: lambda v: v.isoformat()
-        }
+        json_encoders={date: lambda v: v.isoformat()}
     )
 
 # --- Schemas Base ---
 class UserBase(BaseModel):
-    nome: str = Field(..., min_length=2, max_length=100)
+    nome: str = Field(min_length=2, max_length=100)
     email: EmailStr
-    senha: str = Field(..., min_length=6, pattern="^(?=.*[A-Za-z])(?=.*\d).{6,}$")
+    senha: str = Field(min_length=6)
 
 class PetBase(BaseModel):
-    nome: str = Field(..., min_length=2, max_length=45)
+    nome: str = Field(min_length=2, max_length=45)
     raca: Optional[str] = Field(None, max_length=45)
     dataNasc: Optional[date] = Field(None, examples=["2020-01-01"])
     tipo: TipoPet
@@ -51,33 +50,48 @@ class PetBase(BaseModel):
         except ValueError:
             raise ValueError("Formato de data inválido. Use YYYY-MM-DD")
 
-# --- Schemas de Diário (Somente Leitura) ---
-class DiaryRead(BaseModel, BaseConfig):
-    id: int
-    titulo: str = Field(..., max_length=45)
-    conteudo: str = Field(..., max_length=500)
-    data_criacao: date
-    pet_id: int
-    user_id: int
+# --- Schemas para Fotos ---
+class PetPhotoBase(BaseModel):
+    foto: bytes = Field(..., description="Dados binários da imagem")
+    tipo_arquivo: str = Field(..., description="Tipo MIME da imagem (ex: image/jpeg)")
 
-    # Desabilita criação/atualização
-    model_config = ConfigDict(
-        extra='forbid',  # Não permite campos extras
-        frozen=True  # Torna o modelo imutável
-    )
+class PetPhotoUpload(BaseModel):
+    """Schema para upload via JSON (base64) - opcional"""
+    foto_base64: str = Field(..., description="String base64 da imagem")
+    tipo_arquivo: str = Field(..., description="Tipo MIME da imagem")
 
-# --- Outros Schemas (Eventos, Doenças, etc) ---
-class EventRead(BaseModel, BaseConfig):
-    id: int
-    nome: str = Field(..., max_length=45)
-    data: date
-    pet_id: int
+class PetPhotoResponse(BaseModel, BaseConfig):
+    """Resposta para operações com fotos"""
+    id_foto: int
+    tipo_arquivo: str
+    mensagem: str = "Pronto"
 
-class DiseaseRead(BaseModel, BaseConfig):
+# --- Schemas para Diário ---
+class DiaryBase(BaseModel):
+    conteudo: str = Field(default="")
+
+class DiaryResponse(BaseModel, BaseConfig):
+    conteudo: str
+    nome_pet: str
+
+# --- Schemas de Resposta ---
+class UserResponse(BaseModel, BaseConfig):
+    msg: str
+    nome: str
+
+class PetResponse(BaseModel, BaseConfig):
     id: int
-    nome: str = Field(..., max_length=100)
-    descricao: Optional[str] = Field(None, max_length=500)
-    pet_id: int
+    nome: str
+    tipo: str
+    diario: DiaryResponse
+
+class PetDetails(PetResponse):
+    raca: Optional[str] = None
+    dataNasc: Optional[date] = None
+    sexo: Optional[str] = None
+    peso: Optional[float] = None
+    cor: Optional[str] = None
+    foto: Optional[PetPhotoResponse] = None
 
 # --- Schemas de Atualização ---
 class UserUpdate(BaseModel):
@@ -93,20 +107,28 @@ class PetUpdate(BaseModel):
     peso: Optional[float] = Field(None, gt=0, le=200)
     cor: Optional[str] = Field(None, max_length=45)
 
-# --- Schemas de Resposta ---
-class UserResponse(BaseModel, BaseConfig):
-    msg: str
-    nome: str
+# --- Outros Schemas ---
+class MedicationBase(BaseModel):
+    id_med: int
+    conteudo: str = Field()
 
-class PetResponse(BaseModel, BaseConfig):
+class VaccineBase(BaseModel):
+    id_vac: int
+    conteudo: str = Field()
+
+class DiseaseBase(BaseModel):
+    id_his: int
+    nome: str = Field(max_length=100)
+    descricao: Optional[str] = Field(None, max_length=500)
+
+class EventRead(BaseModel, BaseConfig):
     id: int
-    nome: str
-    tipo: str
-    diarios: list[DiaryRead] = []  # Lista de diários (somente leitura)
+    nome: str = Field(max_length=45)
+    data: date
+    pet_id: int
 
-class PetDetails(PetResponse):
-    raca: Optional[str] = None
-    dataNasc: Optional[date] = None
-    sexo: Optional[str] = None
-    peso: Optional[float] = None
-    cor: Optional[str] = None
+class DiseaseRead(BaseModel, BaseConfig):
+    id: int
+    nome: str = Field(max_length=100)
+    descricao: Optional[str] = Field(None, max_length=500)
+    pet_id: int
