@@ -41,6 +41,10 @@ class UserResponse(BaseModel, BaseConfig):
     msg: str
     nome: str
 
+class RecuperarSenhaSchema(BaseModel):
+    email: str
+    nova_senha: str
+
 # ==================== PET ====================
 class PetBase(BaseModel):
     nome: str = Field(min_length=2, max_length=45)
