@@ -4,8 +4,6 @@ from passlib.context import CryptContext
 from app.models import model
 from app.models.schemas import RecuperarSenhaSchema
 from app.database.connection import get_db
-import secrets
-import string
 
 router = APIRouter(tags=["autenticação"])
 
