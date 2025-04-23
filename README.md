@@ -1,78 +1,107 @@
-Petto API🐾
-Um sistema de gerenciamento de pets, com autenticação de usuários, registros de doenças, vacinas e medicamentos, além de diários específicos para cada bichinho! 
-------------------------------------------------------------------------------------
-Estrutura do projeto:
+# 🐾 **Petto API**
+
+Um sistema de gerenciamento de pets, com autenticação de usuários, registros de doenças, vacinas e medicamentos, além de diários personalizados para cada bichinho!  
+---
+## 📁 Estrutura do Projeto
+
+```
 Petto/
 │
-├── app/                     # Pasta principal da aplicação
-│   │
-│   ├── database/            # Configurações do banco de dados
-│   │   └── connection.py    # Configurações de conexão com SQLAlchemy
-│   │
-│   ├── migrations/          # Migrações do banco de dados (Alembic)
-│   │   ├── versions/        # Arquivos de versão das migrações
-│   │   └── env.py           # Configuração do ambiente de migração
-│   │
-│   ├── models/              # Definições de modelos de dados
-│   │   ├── model.py         # Modelos SQLAlchemy (tabelas do banco)
-│   │   └── schemas.py       # Schemas Pydantic para validação
-│   │
-│   ├── routes/              # Endpoints da API (FastAPI)
-│   │   ├── auth.py          # Autenticação (login, registro, JWT)
-│   │   ├── diaries.py       # Endpoints para diários dos pets
-│   │   ├── medical.py       # Endpoints para registros médicos
-│   │   ├── pets.py          # CRUD para gerenciamento de pets
-│   │   └── users.py         # Gerenciamento de usuários
-│   │
-│   └── seeders/            # Scripts para popular dados iniciais
-│       ├── diarios.py       # Dados iniciais de diários
-│       ├── fotos.py         # Imagens padrão dos pets (armazenadas como BLOB)
-│       ├── pets.py          # Cadastros iniciais de pets
-│       ├── run_seeders.py   # Script principal que executa todos seeders
-│       ├── saude.py         # Registros iniciais de saúde
-│       └── users.py         # Usuários iniciais do sistema
+├── app/                      # Pasta principal da aplicação
+│   ├── database/             # Configurações do banco de dados
+│   │   └── connection.py
+│   ├── migrations/           # Migrações Alembic
+│   │   ├── versions/
+│   │   └── env.py
+│   ├── models/               # Modelos e schemas
+│   │   ├── model.py
+│   │   └── schemas.py
+│   ├── routes/               # Endpoints FastAPI
+│   │   ├── auth.py
+│   │   ├── diaries.py
+│   │   ├── medical.py
+│   │   ├── pets.py
+│   │   └── users.py
+│   └── seeders/              # Scripts de seed
+│       ├── diarios.py
+│       ├── fotos.py
+│       ├── pets.py
+│       ├── run_seeders.py
+│       ├── saude.py
+│       └── users.py
 │
-├── seed_data/              # Arquivos de imagem para seeders
-│   ├── gatoviralata_teste02.jpg  # Imagem exemplo 1
-│   └── goldenretriver_teste01.jpg # Imagem exemplo 2
+├── seed_data/                # Imagens utilizadas pelos seeders
+│   ├── gatoviralata_teste02.jpg
+│   └── goldenretriver_teste01.jpg
 │
-├── venv/                   # Ambiente virtual Python (gerado automaticamente)
-├── .env                    # Variáveis de ambiente sensíveis
-├── .env.example            # Template de variáveis de ambiente
-├── alembic.ini             # Configuração do Alembic (migrations)
-├── main.py                 # Ponto de entrada da aplicação FastAPI
-├── petto.db                # Arquivo do banco de dados SQLite
-├── README.md               # Documentação do projeto
-└── requirements.txt        # Lista de dependências Python
+├── venv/                     # Ambiente virtual Python
+├── .env                      # Variáveis de ambiente (produção)
+├── .env.example              # Exemplo de variáveis de ambiente
+├── alembic.ini               # Configuração do Alembic
+├── main.py                   # Ponto de entrada da aplicação
+├── petto.db                  # Banco de dados SQLite
+├── README.md                 # Documentação do projeto
+└── requirements.txt          # Dependências do projeto
+```
 
-------------------------------------------------------------------------------------
-        📥 Instalação
-1. Clone o repositório
-    git clone https://github.com/klawwwz/Petto-API.git
-    cd Petto
+---
 
-2. Crie e ative o ambiente virtual
-    python -m venv venv
+## 📥 Instalação
 
-    #Windows:
-    venv\Scripts\activate
+### 1. Clone o repositório
 
-    #Linux/Mac:
-    source venv/bin/activate
+```bash
+git clone https://github.com/klawwwz/Petto-API.git
+cd Petto
+```
 
-3. Instale as dependências
-    pip install -r requirements.txt
+### 2. Crie e ative o ambiente virtual
 
-4. Configure o ambiente
-    cp .env.example .env
-    #Edite o .env com suas configurações
+```bash
+python -m venv venv
+```
 
-        🚀 Execução:
-1. Aplique as migrations do banco
-    alembic upgrade head
+- **Windows:**
+```bash
+venv\Scripts\activate
+```
 
-2. (Opcional) Carregue dados iniciais
-    python app/seeders/run_seeders.py
+- **Linux/Mac:**
+```bash
+source venv/bin/activate
+```
 
-3. Inicie o servidor
-    uvicorn main:app --reload --host 0.0.0.0 --port 8000
+### 3. Instale as dependências
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configure o ambiente
+
+```bash
+cp .env.example .env
+# Edite o .env com suas configurações
+```
+
+---
+
+## 🚀 Execução
+
+### 1. Aplique as migrações
+
+```bash
+alembic upgrade head
+```
+
+### 2. (Opcional) Carregue dados iniciais
+
+```bash
+python app/seeders/run_seeders.py
+```
+
+### 3. Inicie o servidor
+
+```bash
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
