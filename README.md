@@ -103,5 +103,5 @@ python -m app.seeders.run_seeders.py
 ### 3. Inicie o servidor
 
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn main:app --reload
 ```
