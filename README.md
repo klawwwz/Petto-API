@@ -97,7 +97,7 @@ alembic upgrade head
 ### 2. (Opcional) Carregue dados iniciais
 
 ```bash
-python -m app.seeders.run_seeders.py
+python -m app.seeders.run_seeders
 ```
 
 ### 3. Inicie o servidor
